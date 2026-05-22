@@ -11,16 +11,20 @@
 | 1   | Nguyễn Thành Đạt    | MH-COST-A   |
 | 2   | Hoàng Minh Hải      | MH-COST-A |
 | 3   | Đinh Văn Ty         | MH-COST-V                 |
-| 5   | Từ Phúc Nguyên | MH-COST-V       |
-| 6   | Phan Lê Thanh Hoàng| MH-SEC          |
-| 7   | Nguyễn Văn Toàn     | MH-SEC             |
-| 8   | Nguyễn Minh Thanh   | MH-OBS              |
-| 9   | Ngô Thanh Kiên      | MH-OBS 
-| 10  | Lê Trần Ánh Nhung   | MH-OBS
+| 4   | Từ Phúc Nguyên | MH-COST-V       |
+| 5  | Phan Lê Thanh Hoàng| MH-SEC          |
+| 6   | Nguyễn Văn Toàn     | MH-SEC             |
+| 7   | Nguyễn Minh Thanh   | MH-OBS              |
+| 8   | Ngô Thanh Kiên      | MH-OBS 
+| 9  | Lê Trần Ánh Nhung   | MH-OBS
 
-### W5 Feedback đã giải quyết *(tuỳ chọn)*
 
-> *(Ví dụ: Đã bổ sung lại CloudWatch alarm threshold theo phản hồi của trainer — ngưỡng cũ 5xx > 10 req, đã sửa thành > 5 req với evaluation period 2 phút.)*
+### W5 Feedback đã giải quyết
+
+| Feedback | Trạng thái | Cách xử lý |
+|----------|------------|------------|
+| API Key bị lộ nguyên giá trị trong evidence pack | ✅ Đã xử lý | Rotate key |
+| Presigned URL chứa STS temp credentials | ✅ Đã xử lý | Redact khỏi pack, xem xét Cognito JWT cho production |
 
 ---
 
@@ -28,7 +32,7 @@
 
 ### 2.1 Screenshot — Tags bắt buộc trên ≥ 3 loại resource khác nhau
 
-> **Yêu cầu:** Hiển thị đủ 4 key bắt buộc (`g3:owner`, `g3:environment`, `g3:cost-center	`, `g3:application`) trên ít nhất ba loại resource khác nhau (ví dụ: EC2, RDS, S3, Lambda…).
+> **Yêu cầu:** Hiển thị đủ 4 key bắt buộc (`Owner`, `Environment`, `Cost-center	`, `Application`) trên ít nhất ba loại resource khác nhau (ví dụ: EC2, RDS, S3, Lambda…).
 
 **Resource 1 — EC2 Instance**
 
@@ -66,13 +70,19 @@
 
 ### 2.2 Cost Explorer
 
+![image](https://hackmd.io/_uploads/SkF9F8pyzx.png)
 
-
+*Mô tả: Filter Cost dựa trên tag Owner (tuy nhiên vì thời gian deploy quá ngắn nên chưa kịp hiện các ngày 20-21-22)*
 ### 2.3 Cost Budget:
 
 ![image](https://hackmd.io/_uploads/Skn7BUaJfe.png)
-Bud
+Budget 50$ cho dự án
+
 ![image](https://hackmd.io/_uploads/rJCHIUTJMg.png)
+Alert #1 reach 50% of 50$
+
+![image](https://hackmd.io/_uploads/HJLsIU61Ml.png)
+Alert #2 reach 100% of 50$
 
 *Mô tả: Vì tổng budget của tuần này là 150$ 
 , nên nhóm đã tạo 1 budget 50$ per day từ 20/5->22/5. Với 2 mức cảnh báo 25$ và 50$, khi chạm ngưỡng này sẽ gửi email cho tydv và nguyentp (2 người chịu trách nhiệm về chi phí cho project)*
@@ -95,13 +105,24 @@ Note: tất cả giá trị của tag đều viết bằng chữ thường (ngo�
 | FirstDetectedAt | 2026-05-22T08:15:30+00:00 | ⚠️Không điền lúc tạo resource| Timestamp mà Lambda đã quét qua resource. |Theo chuẩn ISO 8601 UTC timestamp  |
 |Name|g3-dev-frontend-ec2,g3-dev-database-rds|⚠️Khuyến nghị|Tên hiển thị trực quan của tài nguyên trên AWS Console.|Đặt theo cú pháp ghép chuỗi (viết thường 100%, cách nhau bằng dấu gạch ngang):[nhóm]-[môi trường]-[tầng app]-[loại tài nguyên]|
 
-### 2.5 Cost governance 
-
 #### 3. Scope áp dụng
 
 Tất cả resource trong tài khoản AWS của dự án: EC2, RDS, S3, Lambda, ALB, CloudWatch, EBS volumes, Elastic IP.
 
+### 2.5 Cost Anomaly
+![image](https://hackmd.io/_uploads/HyzrK8pJzx.png)
+
+![image](https://hackmd.io/_uploads/BJ_8t8aJzl.png)
+
+*Mô tả: Đã cấu hình và kích hoạt thành công bộ giám sát học máy ecommerce-monitor (loại AWS services) vào ngày 21/05/2026 để tự động quét hành vi chi tiêu và phát hiện biến động bất thường cho toàn bộ hệ thống. Hiện tại hệ thống đang vận hành an toàn với tổng chi tiêu tích lũy mốc baseline đạt $18.00 USD, ghi nhận 0 trường hợp bất thường (Anomalies detected: 0). Luồng cảnh báo khẩn cấp (1 subscription) đã liên kết sẵn sàng để bắn email thông báo ngay lập tức cho Cost Lead nếu có dịch vụ tăng vọt chi phí.*
+
+### 2.6 Cost governance 
+Với việc phải triển khai multi-AZ (tăng HA cho app ecommerce) cho RDS, thì việc chi phí tăng là điều không thể tránh khỏi, nên để có thể bù lại phần tăng đó. Nhóm em đã tối thiểu hóa kích thước Instance (Micro-sizing): Tất cả máy chủ EC2 chỉ được chọn dòng instance nhỏ nhất chạy được ứng dụng (t3.micro hoặc t3.small).
+
+Cơ chế quét dọn tự động qua đêm (Cost Guard): Triển khai một EventBridge Scheduler kết hợp hàm Lambda tự động chạy và quét các resource không có tag Keep = true. Nhằm mục đích không bỏ sót các resource được tạo ra mà không có giá trị cụ thể.
+
 ---
+
 
 ## Section 3 — MH-COST-A: Cost Control & Action
 
@@ -642,7 +663,7 @@ print("FINISHED")
 ---
 
 ### 4.3 Alarm Configuration
-
+EC2 Memory Monitoring Alarm
 ![image](https://hackmd.io/_uploads/BkhafHhJfl.png)
 
 
@@ -689,7 +710,10 @@ TRƯỜNG HỢP mem_used_percent > 20
 | **Supporting network service** | VPC Interface Endpoint `com.amazonaws.us-east-1.monitoring` |
 | **Purpose** | Test CloudWatch EC2 memory monitoring and SNS email notification when RAM usage exceeds configured threshold |
 
+![image](https://hackmd.io/_uploads/S1OduL6kfx.png)
+
 ---
+RDS Disconnect Monitoring Alarm
 ![image](https://hackmd.io/_uploads/BJVPIS6yMe.png)
 | Field | Value |
 |---|---|
@@ -708,6 +732,7 @@ TRƯỜNG HỢP mem_used_percent > 20
 | **Missing data treatment** | Treat missing data as bad (breaching threshold) |
 | **Purpose** | Monitor active RDS database connections and detect unexpected database disconnects or outages |
 
+
 ![image](https://hackmd.io/_uploads/BJj3UHayMl.png)
 | Field | Value |
 |---|---|
@@ -722,10 +747,12 @@ TRƯỜNG HỢP mem_used_percent > 20
 | **Period** | 1 minute |
 | **Current database connections** | `0 active connections` |
 | **Action destination** | SNS topic `RDS-Alert-Topic` → Gmail notification |
-| **Alarm state** | `In alarm` | 
+| **Alarm state** | `In alarm` |  
 | **Missing data treatment** | Treat missing data as bad (breaching threshold) |
 | **Purpose** | Detect database disconnect situations and automatically trigger CloudWatch + SNS email notifications when no active RDS connections are detected |
-    
+
+![image](https://hackmd.io/_uploads/rJj2OIakMg.png)
+
 ### 4.4 Log Insights Query
 
 #### [Track 1] — Truy vấn Phân tích Mật độ Lưu lượng Mạng VPC
@@ -747,7 +774,8 @@ Cơ chế thực thi của cú pháp lệnh (Code Syntax Breakdown):
 **Query time range:** 1h  
 **Saved query name:** `G3_VPC_Log_Stream_Count`
 
-![image](https://hackmd.io/_uploads/SJkif4nyGx.png)
+![image](https://hackmd.io/_uploads/SJpjDIpkzg.png)
+
 
 
 #### [Track 2] — Truy vấn Phân loại Trạng thái Vòng đời Thực thi Lambda
@@ -772,7 +800,7 @@ Cơ chế thực thi của cú pháp lệnh (Code Syntax Breakdown):
 **Query time range:** 1 giờ (1h)
 
 **Saved query name:** G3_Lambda_Status_Type_Analysis
-![image](https://hackmd.io/_uploads/Sk65ISh1Ml.png)
+![image](https://hackmd.io/_uploads/BJc-_L6yGg.png)
 ![image](https://hackmd.io/_uploads/SJxmwrnJzg.png)
 
 
@@ -913,11 +941,7 @@ def lambda_handler(event, context):
 }
 ```
 
-**Screenshot — IAM Role:**
 
-![image](https://hackmd.io/_uploads/HyqiFVakze.png)
-
----
 
 ### 5.3 Trigger — EventBridge Rule
 
@@ -1130,14 +1154,17 @@ custom.costanomalydetection event
            ↓
   EventBridge Rule: CostAnomalyToSNS
            ↓
+ Lambda: cost-anomaly-formatter
+           ↓
   SNS Topic: cost-anomaly-alerts
            ↓
-  📧 tuphucnguyen20051@gmail.com (~30 giây)
+  📧 tuphucnguyen20051@gmail.com
 ```
 
 **Kết quả:** Email "AWS Notification Message" nhận được tại inbox với đầy đủ thông tin anomaly — chứng minh pipeline cảnh báo hoạt động end-to-end, đáp ứng yêu cầu proactive alerting khi chi phí vượt ngưỡng bất thường.
 
-![SNS Email Notification](https://hackmd.io/_uploads/r1GY4BaJGe.png)
+![image](https://hackmd.io/_uploads/S1gXvIpkGe.png)
+
 
 
 
